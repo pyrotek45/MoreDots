@@ -65,7 +65,7 @@ class Unit:
     def die(self) -> None:
         print(f"Unit {self.name} died")
 
-    def do_move_as_type(self, target_list:list["Unit"], goalPos) -> None: 
+    def do_move_as_type(self, target_list:list["Unit"], goalPos) -> None: #TODO: cut down on redundant code by externalizing the loops
          match self.unitType:
             case "Melee":
                 # find closest enemy within vision range, otherwise move to goal
@@ -95,8 +95,42 @@ class Unit:
                 else:
                     self.move(goalPos)
 
-player_army = []
-enemy_army = []
+    def do_attack_as_type(self,targets:list["Unit"]):
+        global OBJECTS #TODO: make an object handler class and pass that as a parameter here
+        match self.unitType:
+            case "Melee":
+                for target in targets:
+                    if self.position.distance_to(target.position) < 20: #TODO: what is this radius? can we make it an object property?
+                        self.attack(target)#TODO: targets take twice dammage because this and the following call do the same thing
+                        target.take_damage(self.attack_power)
+                        if target.health <= 0:
+                            target.die()
+                            targets.remove(target)#TODO: this is bad to do in a loop where we are iterating over the list
+                            # remove from OBJECTS
+                            OBJECTS.remove(target)
+            case "Tank":
+                for target in targets:
+                    if self.position.distance_to(target.position) < 20:
+                        self.attack(target)
+                        target.take_damage(self.attack_power)
+                        if target.health <= 0:
+                            target.die()
+                            targets.remove(target)
+                            # remove from OBJECTS
+                            OBJECTS.remove(target)
+            case "Rusher":
+                for target in targets:
+                    if self.position.distance_to(target.position) < 5:
+                        self.attack(target)
+                        target.take_damage(self.attack_power)
+                        if target.health <= 0:
+                            target.die()
+                            targets.remove(target)
+                            # remove from OBJECTS
+                            OBJECTS.remove(target) 
+
+player_army:list[Unit] = []
+enemy_army:list[Unit] = []
 
 player_score = 0
 enemy_score = 0
@@ -197,72 +231,12 @@ def update_game() -> None:
     for player in player_army:
         if not player.visible:
             continue
-        match player.unitType:
-            case "Melee":
-                for enemy in enemy_army:
-                    if player.position.distance_to(enemy.position) < 20: #TODO: what is this radius? can we make it an object property?
-                        player.attack(enemy)
-                        enemy.take_damage(player.attack_power)
-                        if enemy.health <= 0:
-                            enemy.die()
-                            enemy_army.remove(enemy)
-                            # remove from OBJECTS
-                            OBJECTS.remove(enemy)
-            case "Tank":
-                for enemy in enemy_army:
-                    if player.position.distance_to(enemy.position) < 20:
-                        player.attack(enemy)
-                        enemy.take_damage(player.attack_power)
-                        if enemy.health <= 0:
-                            enemy.die()
-                            enemy_army.remove(enemy)
-                            # remove from OBJECTS
-                            OBJECTS.remove(enemy)
-            case "Rusher":
-                for enemy in enemy_army:
-                    if player.position.distance_to(enemy.position) < 5:
-                        player.attack(enemy)
-                        enemy.take_damage(player.attack_power)
-                        if enemy.health <= 0:
-                            enemy.die()
-                            enemy_army.remove(enemy)
-                            # remove from OBJECTS
-                            OBJECTS.remove(enemy) 
+        player.do_attack_as_type(enemy_army)
 
     for enemy in enemy_army:
         if not enemy.visible:
             continue
-        match enemy.unitType:
-            case "Melee":
-                for player in player_army:
-                    if enemy.position.distance_to(player.position) < 20:
-                        enemy.attack(player)
-                        player.take_damage(enemy.attack_power)
-                        if player.health <= 0:
-                            player.die()
-                            player_army.remove(player)
-                            # remove from OBJECTS
-                            OBJECTS.remove(player)
-            case "Tank":
-                for player in player_army:
-                    if enemy.position.distance_to(player.position) < 20:
-                        enemy.attack(player)
-                        player.take_damage(enemy.attack_power)
-                        if player.health <= 0:
-                            player.die()
-                            player_army.remove(player)
-                            # remove from OBJECTS
-                            OBJECTS.remove(player)
-            case "Rusher":
-                for player in player_army:
-                    if enemy.position.distance_to(player.position) < 5:
-                        enemy.attack(player)
-                        player.take_damage(enemy.attack_power)
-                        if player.health <= 0:
-                            player.die()
-                            player_army.remove(player)
-                            # remove from OBJECTS
-                            OBJECTS.remove(player)
+        enemy.do_attack_as_type(player_army)
 
 
     # remove dead units from army
