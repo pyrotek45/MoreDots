@@ -212,18 +212,6 @@ def update_game() -> None:
         enemy.do_attack_as_type(player_army)
 
 
-    # remove dead units from army #TODO: this logic exists in do_attack_as_type. figure out the best way to handle it and do it only once
-    # for player in player_army:
-    #     if player.health <= 0:
-    #         player.die()
-    #         player_army.remove(player)
-    #         OBJECTS.remove(player)
-
-    # for enemy in enemy_army:
-    #     if enemy.health <= 0:
-    #         enemy.die()
-    #         enemy_army.remove(enemy)
-    #         OBJECTS.remove(enemy)
     
     # if reached goal , make unit not visible
     for unit in player_army:
