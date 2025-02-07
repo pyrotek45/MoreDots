@@ -28,9 +28,7 @@ class Unit(pygame.sprite.Sprite):
         self.visible = False
         self.spawn_time = spawn_time
         self.health = stats["max_health"]
-        #####
-        self.image = None
-        self.rect = None
+        self.signal_to_score = False
     
 
     def draw(self, screen):
@@ -44,11 +42,12 @@ class Unit(pygame.sprite.Sprite):
         if self.visible:
             self.movement_behavior(targets, goal)
             self.attack_behavior(targets)
+            self.reach_goal_logic(goal)
             self.report_if_dead()
             self.draw(screen)
 
 
-    def spawn_logic(self,dt=1/60):
+    def spawn_logic(self,dt=1):
         self.spawn_time -= dt
         self.visible = self.spawn_time <= 0
 
@@ -89,7 +88,11 @@ class Unit(pygame.sprite.Sprite):
         if self.health <= 0:
             DEATH_LOG.append(self.ID)
 
-
+    def reach_goal_logic(self, goal):
+        GOAL_THRESHOLD = 20
+        if self.position.distance_to(goal) < GOAL_THRESHOLD and self.visible:
+            self.signal_to_score = True
+            self.health = -1
 ##################################################################################################
 # Unit Definitions #
 
@@ -182,6 +185,8 @@ if __name__ == "__main__":
 
     # Global consts for game state
     screen = pygame.display.set_mode((1280, 720))
+    clock = pygame.time.Clock() 
+    dt = 0
     goal_left = pygame.Vector2(0, screen.get_height() / 2)
     goal_right = pygame.Vector2(screen.get_width(), screen.get_height() / 2)
 
@@ -208,11 +213,18 @@ if __name__ == "__main__":
         # fill the screen with a color to wipe away anything from last frame
         screen.fill("green")
 
+        #update all sprites (draw logic within)
         player_army.update(screen, enemy_army, goal_right)
         enemy_army.update(screen, player_army, goal_left)
 
+        # update scores
+        player_score += sum([int(unit.signal_to_score) for unit in enemy_army])
+        enemy_score += sum([int(unit.signal_to_score) for unit in player_army])
+
+        # update HUD info
         display_HUD(screen, len(player_army), len(enemy_army), player_score, enemy_score)
 
+        #remove dead units
         player_army.remove([sprite for sprite in player_army if sprite.ID in DEATH_LOG])
         enemy_army.remove([sprite for sprite in enemy_army if sprite.ID in DEATH_LOG])
         DEATH_LOG = []
@@ -220,5 +232,10 @@ if __name__ == "__main__":
         
         # flip() the display to put your work on screen
         pygame.display.flip()
+
+        # limits FPS to 60
+        # dt is delta time in seconds since last frame, used for framerate-
+        # independent physics.
+        dt = clock.tick(60) / 1000
 
 pygame.quit()
