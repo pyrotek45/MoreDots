@@ -1,6 +1,8 @@
 import pygame
 import random
 
+pygame.init()
+
 # Unit Class ############################################################################################
 DEATH_LOG:list[int] = [] # Holds the IDs of Units in need of killing
 
@@ -26,6 +28,9 @@ class Unit(pygame.sprite.Sprite):
         self.visible = False
         self.spawn_time = spawn_time
         self.health = stats["max_health"]
+        #####
+        self.image = None
+        self.rect = None
     
 
     def draw(self, screen):
@@ -33,21 +38,29 @@ class Unit(pygame.sprite.Sprite):
         pygame.draw.circle(screen, self.shape["color"], self.position, self.shape["radius"])
 
 
-    def update(self,targets, goal):
+    def update(self, screen, targets, goal):
         """called by pygame to execute sprite behavior"""
-        self.movement_behavior(targets, goal)
-        self.attack_behavior(targets)
-        self.report_if_dead()
+        self.spawn_logic()
+        if self.visible:
+            self.movement_behavior(targets, goal)
+            self.attack_behavior(targets)
+            self.report_if_dead()
+            self.draw(screen)
+
+
+    def spawn_logic(self,dt=1/60):
+        self.spawn_time -= dt
+        self.visible = self.spawn_time <= 0
 
 
     def movement_behavior(self, target_group:pygame.sprite.Group, goal_position:pygame.Vector2):
         for target in target_group:
-            if self.position.distance_to(target.position) < self.vision:
+            if self.position.distance_to(target.position) < self.stats["vision"]:
                 if self.unitType in ["Mele", "Rusher"]:
                     self.move_towards(target.position)
                     break
                 elif self.unitType == "Tank":
-                    if target.attack_power < self.health:
+                    if (target.stats["atk"] - self.stats["def"]) < self.health:
                         self.move_towards(target.position)
                         break
         else:
@@ -105,56 +118,107 @@ def reset_game_state(screen_height, screen_width):
     num_mele = 10
     num_tank = 5
     num_rush = 15
+    max_spawn_time = 500
 
     for _ in range(num_mele):
         player_army.add(Unit("Mele",
                              pygame.Vector2(0, get_random_y_pos(screen_height)),
                              mele_shape | {"color": "blue"},
                              mele_stats,
-                             random.randint(500)))
+                             random.randint(0, max_spawn_time)))
         enemy_army.add(Unit("Mele",
                              pygame.Vector2(screen_width, get_random_y_pos(screen_height)),
                              mele_shape | {"color": "red"},
                              mele_stats,
-                             random.randint(500)))
+                             random.randint(0, max_spawn_time)))
         
     for _ in range(num_tank):
         player_army.add(Unit("Tank",
                              pygame.Vector2(0, get_random_y_pos(screen_height)),
                              tank_shape | {"color": "blue"},
                              tank_stats,
-                             random.randint(500)))
+                             random.randint(0, max_spawn_time)))
         enemy_army.add(Unit("Tank",
                              pygame.Vector2(screen_width, get_random_y_pos(screen_height)),
                              tank_shape | {"color": "red"},
                              tank_stats,
-                             random.randint(500)))
+                             random.randint(0, max_spawn_time)))
         
     for _ in range(num_rush):
         player_army.add(Unit("Rush",
                              pygame.Vector2(0, get_random_y_pos(screen_height)),
                              rush_shape | {"color": "blue"},
                              rush_stats,
-                             random.randint(500)))
+                             random.randint(0, max_spawn_time)))
         enemy_army.add(Unit("Mele",
                              pygame.Vector2(screen_width, get_random_y_pos(screen_height)),
                              rush_shape | {"color": "red"},
                              rush_stats,
-                             random.randint(500)))
+                             random.randint(0, max_spawn_time)))
 
     return player_army, enemy_army
 
+
+FONT = pygame.font.Font(None, 36)
+def display_HUD(screen, p_army_size, e_army_size, p_score, e_score):
+    global FONT
+    # show army count on screen top left
+    army_text_p = FONT.render(f"Player Army: {p_army_size}", True, "black")
+    army_text_e = FONT.render(f"Enemy Army: {e_army_size}", True, "black")
+    screen.blit(army_text_p, (0, 0))
+    screen.blit(army_text_e, (0, 40))
+
+    # show scores
+    score_text_p = FONT.render(f"Player Score: {p_score}", True, "black")
+    score_text_e = FONT.render(f"Enemy Score: {e_score}", True, "black")
+    screen.blit(score_text_p, (0, 80))
+    screen.blit(score_text_e, (0, 120))
 
 
 ##################################################################################################
 
 # MAIN (all runtime code goes in here)
 if __name__ == "__main__":
-    pygame.init()
 
-    # Global Variables for game state
+    # Global consts for game state
     screen = pygame.display.set_mode((1280, 720))
     goal_left = pygame.Vector2(0, screen.get_height() / 2)
     goal_right = pygame.Vector2(screen.get_width(), screen.get_height() / 2)
 
+    #global variables for game state
     player_army, enemy_army = reset_game_state(screen.get_height(), screen.get_width())
+    player_score = enemy_score = 0
+
+    #running state
+    running = True
+
+    while running:
+        # poll for events
+        # pygame.QUIT event means the user clicked X to close your window
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    player_army, enemy_army = reset_game_state(screen.get_height(), screen.get_width())
+                    player_score = enemy_score = 0
+
+                    
+        # fill the screen with a color to wipe away anything from last frame
+        screen.fill("green")
+
+        player_army.update(screen, enemy_army, goal_right)
+        enemy_army.update(screen, player_army, goal_left)
+
+        display_HUD(screen, len(player_army), len(enemy_army), player_score, enemy_score)
+
+        player_army.remove([sprite for sprite in player_army if sprite.ID in DEATH_LOG])
+        enemy_army.remove([sprite for sprite in enemy_army if sprite.ID in DEATH_LOG])
+        DEATH_LOG = []
+
+        
+        # flip() the display to put your work on screen
+        pygame.display.flip()
+
+pygame.quit()
