@@ -213,13 +213,13 @@ if __name__ == "__main__":
         # fill the screen with a color to wipe away anything from last frame
         screen.fill("green")
 
-        #update all sprites (draw logic within)
+        #update all sprites (draw, attack, move, spawn, and death logic within)
         player_army.update(screen, enemy_army, goal_right)
         enemy_army.update(screen, player_army, goal_left)
 
         # update scores
-        player_score += sum([int(unit.signal_to_score) for unit in enemy_army])
-        enemy_score += sum([int(unit.signal_to_score) for unit in player_army])
+        player_score += sum([int(unit.signal_to_score) for unit in player_army])
+        enemy_score += sum([int(unit.signal_to_score) for unit in enemy_army])
 
         # update HUD info
         display_HUD(screen, len(player_army), len(enemy_army), player_score, enemy_score)
