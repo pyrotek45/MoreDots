@@ -1,8 +1,9 @@
-# Example file showing a circle moving on screen
+# global imports
 import pygame
 from random import random
 
-# pygame setup
+
+# pygame setup #TODO can we make a custom game class to house all of the pygame boilerplate?
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
 clock = pygame.time.Clock()
@@ -45,7 +46,7 @@ class Unit:
         self.speed = speed
         self.unitType = unitType
         self.vision = 100
-        self.visable = False
+        self.visible = False
         self.spawnTime = spawnTime
 
     def move(self, target) -> None:
@@ -55,7 +56,7 @@ class Unit:
             direction.normalize_ip()
         self.position += direction * self.speed
 
-    def attack(self, target) -> None:
+    def attack(self, target:"Unit") -> None:
         target.take_damage(self.attack_power)
 
     def take_damage(self, damage) -> None:
@@ -73,7 +74,7 @@ enemy_score = 0
 # enemy army spawns on right side in random positions
 def setup():
 
-    global player_army, enemy_army, OBJECTS, player_score, enemy_score
+    global player_army, enemy_army, OBJECTS, player_score, enemy_score #TODO global badness
     player_army = []
     enemy_army = []
     player_score = 0
@@ -84,13 +85,13 @@ def setup():
         # player on left side
         player_pos = pygame.Vector2(0, screen.get_height()*random())
         def playerDraw(obj):
-            if obj.visable: 
+            if obj.visible: 
                 pygame.draw.circle(screen, "blue", obj.position, 20)
         player_army.append(Unit("Player", player_pos, playerDraw, 100, 10, 5, 5, "Melee", random() * 500))
 
         enemy_pos = pygame.Vector2(screen.get_width(), screen.get_height()*random())
         def enemyDraw(obj):
-            if obj.visable: 
+            if obj.visible: 
                 pygame.draw.circle(screen, "red", obj.position, 20)
         enemy_army.append(Unit("Enemy", enemy_pos, enemyDraw, 100, 10, 5, 5, "Melee", random() * 500))
 
@@ -99,13 +100,13 @@ def setup():
         # player on left side
         player_pos = pygame.Vector2(0, screen.get_height()*random())
         def playerDraw(obj):
-            if obj.visable: 
+            if obj.visible: 
                 pygame.draw.circle(screen, "blue", obj.position, 30)
         player_army.append(Unit("Player", player_pos, playerDraw, 200, 20, 10, 3, "Tank", random() * 500))
 
         enemy_pos = pygame.Vector2(screen.get_width(), screen.get_height()*random())
         def enemyDraw(obj):
-            if obj.visable: 
+            if obj.visible: 
                 pygame.draw.circle(screen, "red", obj.position, 30)
         enemy_army.append(Unit("Enemy", enemy_pos, enemyDraw, 200, 20, 10, 3, "Tank", random() * 500))
 
@@ -114,13 +115,13 @@ def setup():
         # player on left side
         player_pos = pygame.Vector2(0, screen.get_height()*random())
         def playerDraw(obj):
-            if obj.visable: 
+            if obj.visible: 
                 pygame.draw.circle(screen, "blue", obj.position, 5)
         player_army.append(Unit("Player", player_pos, playerDraw, 50, 40, 2, 8, "Rusher", random() * 500))
 
         enemy_pos = pygame.Vector2(screen.get_width(), screen.get_height()*random())
         def enemyDraw(obj):
-            if obj.visable: 
+            if obj.visible: 
                 pygame.draw.circle(screen, "red", obj.position, 5)
         enemy_army.append(Unit("Enemy", enemy_pos, enemyDraw, 50, 40, 2, 8, "Rusher", random() * 500))
 
@@ -140,21 +141,17 @@ def update_game() -> None:
     # decrement spawn time for each unit and spawn if 0 or less
     for unit in player_army:
         unit.spawnTime -= 1
-        if unit.spawnTime <= 0:
-            unit.spawnTime = 0
-            unit.visable = True
+        unit.visible = unit.spawnTime <= 0
 
     for unit in enemy_army:
         unit.spawnTime -= 1
-        if unit.spawnTime <= 0:
-            unit.spawnTime = 0
-            unit.visable = True
+        unit.visible = unit.spawnTime <= 0
 
 
 
     goalPos = pygame.Vector2(screen.get_width(), screen.get_height() / 2)
     for unit in player_army:
-        if not unit.visable:
+        if not unit.visible:
             continue
         match unit.unitType:
             case "Melee":
@@ -187,7 +184,7 @@ def update_game() -> None:
 
     goalPos = pygame.Vector2(0, screen.get_height() / 2)
     for unit in enemy_army:
-        if not unit.visable:
+        if not unit.visible:
             continue
         match unit.unitType:
             case "Melee":
@@ -221,7 +218,7 @@ def update_game() -> None:
     # update unit attacks
     ## if enemy in range, attack, melee units kill on contact
     for player in player_army:
-        if not player.visable:
+        if not player.visible:
             continue
         match player.unitType:
             case "Melee":
@@ -256,7 +253,7 @@ def update_game() -> None:
                             OBJECTS.remove(enemy) 
 
     for enemy in enemy_army:
-        if not enemy.visable:
+        if not enemy.visible:
             continue
         match enemy.unitType:
             case "Melee":
@@ -307,7 +304,7 @@ def update_game() -> None:
     # if reached goal , make unit not visible
     goalPos = pygame.Vector2(screen.get_width(), screen.get_height() / 2)
     for unit in player_army:
-        if unit.position.distance_to(goalPos) < 20 and unit.visable:
+        if unit.position.distance_to(goalPos) < 20 and unit.visible:
             player_score += 1
             # remove from army
             player_army.remove(unit)
@@ -315,7 +312,7 @@ def update_game() -> None:
 
     goalPos = pygame.Vector2(0, screen.get_height() / 2)
     for unit in enemy_army:
-        if unit.position.distance_to(goalPos) < 20 and unit.visable:
+        if unit.position.distance_to(goalPos) < 20 and unit.visible:
             enemy_score += 1
             # remove from army
             enemy_army.remove(unit)
