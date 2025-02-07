@@ -45,13 +45,13 @@ class Unit:
             direction.normalize_ip()
         self.position += direction * self.speed
 
-    def attack(self, target:"Unit") -> None:
-        target.take_damage(self.attack_power)
+    # def attack(self, target:"Unit") -> None: #TODO: let this call target.die()
+    #     target.take_damage(self.attack_power)
 
     def take_damage(self, damage) -> None:
         self.health -= damage
 
-    def die(self) -> None:
+    def die(self) -> None: #TODO: set an alive bool to false, for lazy cleanup
         print(f"Unit {self.name} died")
 
     def do_move_as_type(self, target_list:list["Unit"], goalPos) -> None:
@@ -84,7 +84,7 @@ class Unit:
             case "Tank":
                 for target in targets:
                     if self.position.distance_to(target.position) < 20:
-                        #self.attack(target)
+                        # self.attack(target)
                         target.take_damage(self.attack_power)
                         if target.health <= 0:
                             target.die()
@@ -94,7 +94,7 @@ class Unit:
             case "Rusher":
                 for target in targets:
                     if self.position.distance_to(target.position) < 5:
-                        #self.attack(target)
+                        # self.attack(target)
                         target.take_damage(self.attack_power)
                         if target.health <= 0:
                             target.die()
@@ -213,17 +213,17 @@ def update_game() -> None:
 
 
     # remove dead units from army #TODO: this logic exists in do_attack_as_type. figure out the best way to handle it and do it only once
-    for player in player_army:
-        if player.health <= 0:
-            player.die()
-            player_army.remove(player)
-            OBJECTS.remove(player)
+    # for player in player_army:
+    #     if player.health <= 0:
+    #         player.die()
+    #         player_army.remove(player)
+    #         OBJECTS.remove(player)
 
-    for enemy in enemy_army:
-        if enemy.health <= 0:
-            enemy.die()
-            enemy_army.remove(enemy)
-            OBJECTS.remove(enemy)
+    # for enemy in enemy_army:
+    #     if enemy.health <= 0:
+    #         enemy.die()
+    #         enemy_army.remove(enemy)
+    #         OBJECTS.remove(enemy)
     
     # if reached goal , make unit not visible
     for unit in player_army:
