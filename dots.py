@@ -57,10 +57,7 @@ class Unit:
     def do_move_as_type(self, target_list:list["Unit"], goalPos) -> None:
         for target in target_list:
             if self.position.distance_to(target.position) < self.vision:
-                if self.unitType == "Mele":
-                    self.move(target.position)
-                    break
-                elif self.unitType ==  "Rusher":
+                if self.unitType in ["Mele", "Rusher"]:
                     self.move(target.position)
                     break
                 elif self.unitType == "Tank":
@@ -77,7 +74,7 @@ class Unit:
             case "Melee":
                 for target in targets:
                     if self.position.distance_to(target.position) < 20: #TODO: what is this radius? can we make it an object property?
-                        self.attack(target)#TODO: targets take twice dammage because this and the following call do the same thing
+                        #self.attack(target)#TODO: targets take twice dammage because this and the following call do the same thing
                         target.take_damage(self.attack_power)
                         if target.health <= 0:
                             target.die()
@@ -87,7 +84,7 @@ class Unit:
             case "Tank":
                 for target in targets:
                     if self.position.distance_to(target.position) < 20:
-                        self.attack(target)
+                        #self.attack(target)
                         target.take_damage(self.attack_power)
                         if target.health <= 0:
                             target.die()
@@ -97,7 +94,7 @@ class Unit:
             case "Rusher":
                 for target in targets:
                     if self.position.distance_to(target.position) < 5:
-                        self.attack(target)
+                        #self.attack(target)
                         target.take_damage(self.attack_power)
                         if target.health <= 0:
                             target.die()
