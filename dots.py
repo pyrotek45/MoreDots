@@ -129,6 +129,8 @@ def setup():
     OBJECTS += enemy_army
 
 # need to update army positions based on unit type and strategy
+goalPos_left = pygame.Vector2(0, screen.get_height() / 2)
+goalPos_right = pygame.Vector2(screen.get_width(), screen.get_height() / 2)
 
 def update_game() -> None:
     global player_score, enemy_score
@@ -149,7 +151,7 @@ def update_game() -> None:
 
 
 
-    goalPos = pygame.Vector2(screen.get_width(), screen.get_height() / 2)
+    
     for unit in player_army:
         if not unit.visible:
             continue
@@ -161,7 +163,7 @@ def update_game() -> None:
                         unit.move(enemy.position)
                         break
                 else:
-                    unit.move(goalPos)
+                    unit.move(goalPos_right)
             case "Tank":
                 # will attack closest enemy within vision range if their damage is higher than their health
                 for enemy in enemy_army:
@@ -169,10 +171,10 @@ def update_game() -> None:
                         if enemy.attack_power < unit.health:
                             unit.move(enemy.position)
                         else:
-                            unit.move(goalPos)
+                            unit.move(goalPos_right)
                         break
                 else:
-                    unit.move(goalPos)
+                    unit.move(goalPos_right)
             case "Rusher":
                 # move to closest enemy within vision range
                 for enemy in enemy_army:
@@ -180,9 +182,9 @@ def update_game() -> None:
                         unit.move(enemy.position)
                         break
                 else:
-                    unit.move(goalPos)
+                    unit.move(goalPos_right)
 
-    goalPos = pygame.Vector2(0, screen.get_height() / 2)
+    
     for unit in enemy_army:
         if not unit.visible:
             continue
@@ -194,7 +196,7 @@ def update_game() -> None:
                         unit.move(player.position)
                         break
                 else:
-                    unit.move(goalPos)
+                    unit.move(goalPos_left)
             case "Tank":
                 # will attack closest enemy within vision range if their damage is higher than their health
                 for player in player_army:
@@ -202,10 +204,10 @@ def update_game() -> None:
                         if player.attack_power < unit.health:
                             unit.move(player.position)
                         else:
-                            unit.move(goalPos)
+                            unit.move(goalPos_left)
                         break
                 else:
-                    unit.move(goalPos)
+                    unit.move(goalPos_left)
             case "Rusher":
                 # move to closest enemy within vision range
                 for player in player_army:
@@ -213,7 +215,7 @@ def update_game() -> None:
                         unit.move(player.position)
                         break
                 else:
-                    unit.move(goalPos)
+                    unit.move(goalPos_left)
 
     # update unit attacks
     ## if enemy in range, attack, melee units kill on contact
@@ -302,17 +304,16 @@ def update_game() -> None:
             OBJECTS.remove(enemy)
     
     # if reached goal , make unit not visible
-    goalPos = pygame.Vector2(screen.get_width(), screen.get_height() / 2)
     for unit in player_army:
-        if unit.position.distance_to(goalPos) < 20 and unit.visible:
+        if unit.position.distance_to(goalPos_right) < 20 and unit.visible:
             player_score += 1
             # remove from army
             player_army.remove(unit)
             OBJECTS.remove(unit)
 
-    goalPos = pygame.Vector2(0, screen.get_height() / 2)
+
     for unit in enemy_army:
-        if unit.position.distance_to(goalPos) < 20 and unit.visible:
+        if unit.position.distance_to(goalPos_left) < 20 and unit.visible:
             enemy_score += 1
             # remove from army
             enemy_army.remove(unit)
