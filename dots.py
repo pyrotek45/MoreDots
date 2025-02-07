@@ -65,6 +65,36 @@ class Unit:
     def die(self) -> None:
         print(f"Unit {self.name} died")
 
+    def do_move_as_type(self, target_list:list["Unit"], goalPos) -> None: 
+         match self.unitType:
+            case "Melee":
+                # find closest enemy within vision range, otherwise move to goal
+                for target in target_list:
+                    if self.position.distance_to(target.position) < self.vision:
+                        self.move(target.position)
+                        break
+                else:
+                    self.move(goalPos)
+            case "Tank":
+                # will attack closest enemy within vision range if their damage is higher than their health
+                for target in target_list:
+                    if self.position.distance_to(target.position) < self.vision:
+                        if target.attack_power < self.health:
+                            self.move(target.position)
+                        else:
+                            self.move(goalPos)
+                        break
+                else:
+                    self.move(goalPos)
+            case "Rusher":
+                # move to closest enemy within vision range
+                for target in target_list:
+                    if self.position.distance_to(target.position) < self.vision:
+                        self.move(target.position)
+                        break
+                else:
+                    self.move(goalPos)
+
 player_army = []
 enemy_army = []
 
@@ -133,12 +163,13 @@ goalPos_left = pygame.Vector2(0, screen.get_height() / 2)
 goalPos_right = pygame.Vector2(screen.get_width(), screen.get_height() / 2)
 
 def update_game() -> None:
+    """
+    update game logic \n
+    update unit positions \n
+    move to closest enemy \n
+    goal is other right side of screen, not random just right side of screen
+    """
     global player_score, enemy_score
-    # update game logic
-    # update unit positions
-    # move to closest enemy
-    # goal is other right side of screen, not random just right side of screen
-
     ## need to stagger spawning of units, into random groups of 5 , could use choice till no more units left
     # decrement spawn time for each unit and spawn if 0 or less
     for unit in player_army:
@@ -149,73 +180,17 @@ def update_game() -> None:
         unit.spawnTime -= 1
         unit.visible = unit.spawnTime <= 0
 
-
-
     
-    for unit in player_army:
+    for unit in player_army: #TODO: combine all player_army loops into one loop
         if not unit.visible:
             continue
-        match unit.unitType:
-            case "Melee":
-                # find closest enemy within vision range, otherwise move to goal
-                for enemy in enemy_army:
-                    if unit.position.distance_to(enemy.position) < unit.vision:
-                        unit.move(enemy.position)
-                        break
-                else:
-                    unit.move(goalPos_right)
-            case "Tank":
-                # will attack closest enemy within vision range if their damage is higher than their health
-                for enemy in enemy_army:
-                    if unit.position.distance_to(enemy.position) < unit.vision:
-                        if enemy.attack_power < unit.health:
-                            unit.move(enemy.position)
-                        else:
-                            unit.move(goalPos_right)
-                        break
-                else:
-                    unit.move(goalPos_right)
-            case "Rusher":
-                # move to closest enemy within vision range
-                for enemy in enemy_army:
-                    if unit.position.distance_to(enemy.position) < unit.vision:
-                        unit.move(enemy.position)
-                        break
-                else:
-                    unit.move(goalPos_right)
+        unit.do_move_as_type(enemy_army,goalPos_right)
 
     
     for unit in enemy_army:
         if not unit.visible:
             continue
-        match unit.unitType:
-            case "Melee":
-                # find closest enemy within vision range
-                for player in player_army:
-                    if unit.position.distance_to(player.position) < unit.vision:
-                        unit.move(player.position)
-                        break
-                else:
-                    unit.move(goalPos_left)
-            case "Tank":
-                # will attack closest enemy within vision range if their damage is higher than their health
-                for player in player_army:
-                    if unit.position.distance_to(player.position) < unit.vision:
-                        if player.attack_power < unit.health:
-                            unit.move(player.position)
-                        else:
-                            unit.move(goalPos_left)
-                        break
-                else:
-                    unit.move(goalPos_left)
-            case "Rusher":
-                # move to closest enemy within vision range
-                for player in player_army:
-                    if unit.position.distance_to(player.position) < unit.vision:
-                        unit.move(player.position)
-                        break
-                else:
-                    unit.move(goalPos_left)
+        unit.do_move_as_type(player_army,goalPos_left)
 
     # update unit attacks
     ## if enemy in range, attack, melee units kill on contact
@@ -225,7 +200,7 @@ def update_game() -> None:
         match player.unitType:
             case "Melee":
                 for enemy in enemy_army:
-                    if player.position.distance_to(enemy.position) < 20:
+                    if player.position.distance_to(enemy.position) < 20: #TODO: what is this radius? can we make it an object property?
                         player.attack(enemy)
                         enemy.take_damage(player.attack_power)
                         if enemy.health <= 0:
