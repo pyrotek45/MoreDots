@@ -17,19 +17,8 @@ player_pos = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
 
 OBJECTS = []
 
-class GameObject:
-    def __init__(self, name, position, drawFunc) -> None:
-        self.name = name
-        self.position = position
-        self.draw = drawFunc
 
-####
-# init game objects
-goalPos = pygame.Vector2(screen.get_width()*random(), screen.get_height()*random())
-goalDraw = lambda obj: pygame.draw.circle(screen, "green", obj.position, 80)
-OBJECTS.append(GameObject("Goal", goalPos, goalDraw))
 
-####
 
 ### reconx game where you have circles that fight each other in a 2d space
 ### is like watching a war of ants
@@ -65,35 +54,22 @@ class Unit:
     def die(self) -> None:
         print(f"Unit {self.name} died")
 
-    def do_move_as_type(self, target_list:list["Unit"], goalPos) -> None: #TODO: cut down on redundant code by externalizing the loops
-         match self.unitType:
-            case "Melee":
-                # find closest enemy within vision range, otherwise move to goal
-                for target in target_list:
-                    if self.position.distance_to(target.position) < self.vision:
+    def do_move_as_type(self, target_list:list["Unit"], goalPos) -> None:
+        for target in target_list:
+            if self.position.distance_to(target.position) < self.vision:
+                if self.unitType == "Mele":
+                    self.move(target.position)
+                    break
+                elif self.unitType ==  "Rusher":
+                    self.move(target.position)
+                    break
+                elif self.unitType == "Tank":
+                    if target.attack_power < self.health:
                         self.move(target.position)
                         break
-                else:
-                    self.move(goalPos)
-            case "Tank":
-                # will attack closest enemy within vision range if their damage is higher than their health
-                for target in target_list:
-                    if self.position.distance_to(target.position) < self.vision:
-                        if target.attack_power < self.health:
-                            self.move(target.position)
-                        else:
-                            self.move(goalPos)
-                        break
-                else:
-                    self.move(goalPos)
-            case "Rusher":
-                # move to closest enemy within vision range
-                for target in target_list:
-                    if self.position.distance_to(target.position) < self.vision:
-                        self.move(target.position)
-                        break
-                else:
-                    self.move(goalPos)
+        else:
+            self.move(goalPos)
+
 
     def do_attack_as_type(self,targets:list["Unit"]):
         global OBJECTS #TODO: make an object handler class and pass that as a parameter here
@@ -143,7 +119,7 @@ def setup():
     enemy_army = []
     player_score = 0
     enemy_score = 0
-    OBJECTS = []
+    OBJECTS = [] #TODO: why is objects cleared out when we add things into it in the global scope?
 
     for i in range(10):
         # player on left side
@@ -214,7 +190,7 @@ def update_game() -> None:
         unit.spawnTime -= 1
         unit.visible = unit.spawnTime <= 0
 
-    
+    #TODO: pretty sure the player always wins because their move and attack calls are handled first    
     for unit in player_army: #TODO: combine all player_army loops into one loop
         if not unit.visible:
             continue
@@ -239,7 +215,7 @@ def update_game() -> None:
         enemy.do_attack_as_type(player_army)
 
 
-    # remove dead units from army
+    # remove dead units from army #TODO: this logic exists in do_attack_as_type. figure out the best way to handle it and do it only once
     for player in player_army:
         if player.health <= 0:
             player.die()
@@ -267,9 +243,6 @@ def update_game() -> None:
             # remove from army
             enemy_army.remove(unit)
             OBJECTS.remove(unit)
-
-    # update unit strategies
-    pass
 
 
 while running:
