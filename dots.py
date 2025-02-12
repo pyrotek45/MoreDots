@@ -1,5 +1,6 @@
 import pygame
 import random
+import matplotlib.pyplot as plt
 
 pygame.init()
 
@@ -28,13 +29,22 @@ class Unit(pygame.sprite.Sprite):
         self.visible = False
         self.spawn_time = spawn_time
         self.health = stats["max_health"]
+        self.color = shape["color"]
         self.signal_to_score = False
+        #####
+        self.can_charge = 0
     
 
     def draw(self, screen):
         """called by pygame to render sprite to the screen"""
-        pygame.draw.circle(screen, self.shape["color"], self.position, self.shape["radius"])
-
+        pygame.draw.circle(screen, self.color, self.position, self.shape["radius"])
+        L = self.position.x-self.shape["radius"]
+        H = 4
+        T = self.position.y-self.shape["radius"]-H - 5 #padding
+        W = self.shape["radius"]*2
+        
+        pygame.draw.rect(screen, "red", pygame.Rect(L,T,W,H))
+        pygame.draw.rect(screen, "green", pygame.Rect(L,T,W*(self.health/self.stats["max_health"]),H))
 
     def update(self, screen, targets, goal):
         """called by pygame to execute sprite behavior"""
@@ -62,6 +72,18 @@ class Unit(pygame.sprite.Sprite):
                     if (target.stats["atk"] - self.stats["def"]) < self.health:
                         self.move_towards(target.position)
                         break
+                elif self.unitType == "Defense":
+                    if self.can_charge % 50 == 24:
+                        self.stats["speed"] *= 2
+                        self.color = self.shape["charge_color"]
+
+                    elif self.can_charge % 50 == 49:
+                        self.stats["speed"] *= 0.5
+                        self.color = self.shape["color"]
+
+                    self.can_charge += 1
+                    self.move_towards(target.position)
+                    break
         else:
             self.move_towards(goal_position)
 
@@ -75,7 +97,7 @@ class Unit(pygame.sprite.Sprite):
 
     def attack_behavior(self, target_group:pygame.sprite.Group):
         for target in target_group:
-            if self.position.distance_to(target.position) < self.shape["radius"]:
+            if self.position.distance_to(target.position) < max(self.shape["radius"],target.shape["radius"]):
                 self.attack(target)
 
 
@@ -101,12 +123,16 @@ mele_shape = {"radius":20}
 mele_stats = {"max_health":100, "atk":10, "def":5, "speed":5, "vision":100}
 
 # Tank Unit
-tank_shape = {"radius":30}
-tank_stats = {"max_health":200, "atk":20, "def":10, "speed":3, "vision":100}
+tank_shape = {"radius":80}
+tank_stats = {"max_health":200, "atk":5, "def":10, "speed":3, "vision":200}
 
 # Rush Unit
-rush_shape = {"radius":5}
-rush_stats = {"max_health":50, "atk":40, "def":2, "speed":8, "vision":100}
+rush_shape = {"radius":10}
+rush_stats = {"max_health":50, "atk":40, "def":2, "speed":9, "vision":80}
+
+# Defense Unit
+defense_shape = {"radius":40, "charge_color":"yellow"}
+defense_stats = {"max_health":150, "atk":8, "def":40, "speed":4, "vision":150}
 
 ##################################################################################################
 def get_random_y_pos(screen_height):
@@ -121,6 +147,7 @@ def reset_game_state(screen_height, screen_width):
     num_mele = 10
     num_tank = 5
     num_rush = 15
+    num_defense = 2
     max_spawn_time = 500
 
     for _ in range(num_mele):
@@ -148,15 +175,27 @@ def reset_game_state(screen_height, screen_width):
                              random.randint(0, max_spawn_time)))
         
     for _ in range(num_rush):
-        player_army.add(Unit("Rush",
+        player_army.add(Unit("Rusher",
                              pygame.Vector2(0, get_random_y_pos(screen_height)),
                              rush_shape | {"color": "blue"},
                              rush_stats,
                              random.randint(0, max_spawn_time)))
-        enemy_army.add(Unit("Mele",
+        enemy_army.add(Unit("Rusher",
                              pygame.Vector2(screen_width, get_random_y_pos(screen_height)),
                              rush_shape | {"color": "red"},
                              rush_stats,
+                             random.randint(0, max_spawn_time)))
+        
+    for _ in range(num_defense):
+        player_army.add(Unit("Defense",
+                             pygame.Vector2(0, get_random_y_pos(screen_height)),
+                             defense_shape | {"color": "blue"},
+                             defense_stats,
+                             random.randint(0, max_spawn_time)))
+        enemy_army.add(Unit("Defense",
+                             pygame.Vector2(screen_width, get_random_y_pos(screen_height)),
+                             defense_shape | {"color": "red"},
+                             defense_stats,
                              random.randint(0, max_spawn_time)))
 
     return player_army, enemy_army
@@ -182,60 +221,75 @@ def display_HUD(screen, p_army_size, e_army_size, p_score, e_score):
 
 # MAIN (all runtime code goes in here)
 if __name__ == "__main__":
+    try:
+        win_log = []
 
-    # Global consts for game state
-    screen = pygame.display.set_mode((1280, 720))
-    clock = pygame.time.Clock() 
-    dt = 0
-    goal_left = pygame.Vector2(0, screen.get_height() / 2)
-    goal_right = pygame.Vector2(screen.get_width(), screen.get_height() / 2)
+        # Global consts for game state
+        screen = pygame.display.set_mode((1920, 1080))
+        clock = pygame.time.Clock() 
+        dt = 0
+        goal_left = pygame.Vector2(0, screen.get_height() / 2)
+        goal_right = pygame.Vector2(screen.get_width(), screen.get_height() / 2)
 
-    #global variables for game state
-    player_army, enemy_army = reset_game_state(screen.get_height(), screen.get_width())
-    player_score = enemy_score = 0
+        #global variables for game state
+        player_army, enemy_army = reset_game_state(screen.get_height(), screen.get_width())
+        player_score = enemy_score = 0
 
-    #running state
-    running = True
+        #running state
+        running = True
 
-    while running:
-        # poll for events
-        # pygame.QUIT event means the user clicked X to close your window
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
+        while running:
+            # poll for events
+            # pygame.QUIT event means the user clicked X to close your window
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
 
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    player_army, enemy_army = reset_game_state(screen.get_height(), screen.get_width())
-                    player_score = enemy_score = 0
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        player_army, enemy_army = reset_game_state(screen.get_height(), screen.get_width())
+                        player_score = enemy_score = 0
 
-                    
-        # fill the screen with a color to wipe away anything from last frame
-        screen.fill("green")
 
-        #update all sprites (draw, attack, move, spawn, and death logic within)
-        player_army.update(screen, enemy_army, goal_right)
-        enemy_army.update(screen, player_army, goal_left)
+            if len(player_army) + len(enemy_army) == 0:
+                win_log.append((player_score, enemy_score))
+                player_army, enemy_army = reset_game_state(screen.get_height(), screen.get_width())
+                player_score = enemy_score = 0
+            
+            # fill the screen with a color to wipe away anything from last frame
+            screen.fill("grey")
 
-        # update scores
-        player_score += sum([int(unit.signal_to_score) for unit in player_army])
-        enemy_score += sum([int(unit.signal_to_score) for unit in enemy_army])
+            #update all sprites (draw, attack, move, spawn, and death logic within)
+            enemy_army.update(screen, player_army, goal_left)
+            player_army.update(screen, enemy_army, goal_right)
+            
 
-        # update HUD info
-        display_HUD(screen, len(player_army), len(enemy_army), player_score, enemy_score)
+            # update scores
+            player_score += sum([int(unit.signal_to_score) for unit in player_army])
+            enemy_score += sum([int(unit.signal_to_score) for unit in enemy_army])
 
-        #remove dead units
-        player_army.remove([sprite for sprite in player_army if sprite.ID in DEATH_LOG])
-        enemy_army.remove([sprite for sprite in enemy_army if sprite.ID in DEATH_LOG])
-        DEATH_LOG = []
+            # update HUD info
+            display_HUD(screen, len(player_army), len(enemy_army), player_score, enemy_score)
 
-        
-        # flip() the display to put your work on screen
-        pygame.display.flip()
+            #remove dead units
+            player_army.remove([sprite for sprite in player_army if sprite.ID in DEATH_LOG])
+            enemy_army.remove([sprite for sprite in enemy_army if sprite.ID in DEATH_LOG])
+            DEATH_LOG = []
 
-        # limits FPS to 60
-        # dt is delta time in seconds since last frame, used for framerate-
-        # independent physics.
-        dt = clock.tick(60) / 1000
+            
+            # flip() the display to put your work on screen
+            pygame.display.flip()
+
+            # limits FPS to 60
+            # dt is delta time in seconds since last frame, used for framerate-
+            # independent physics.
+            dt = clock.tick(45) / 1000
+
+    except KeyboardInterrupt:
+        from statistics import mean
+        P, E = list(zip(*win_log))
+        L = len(win_log)
+        print()
+        print(f"Player {mean(P)}; Enemy {mean(E)}; Win Ratio (P) {mean([1 if p>e else 0 for p,e in win_log])}")
 
 pygame.quit()
